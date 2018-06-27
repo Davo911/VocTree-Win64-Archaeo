@@ -10,9 +10,9 @@
 
 #include <sys/stat.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <io.h>
 
-#include <dirent.h>
+#include "dirent.h"
 
 #include <fstream>
 #include <string.h>

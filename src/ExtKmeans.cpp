@@ -12,7 +12,7 @@
 
 #include <set>
 #include <list>
-
+#include <random>
 #include <iostream>
 
 using namespace std;
@@ -149,7 +149,7 @@ void initCentersKMeans(
     while (tries-- > 0 && (int) distinct.size() < numSamples) {
 
         //int rndRow = random() % mp.rows();
-        int rndRow = random() % maxRows;
+        int rndRow = rand() % maxRows;
         ret = distinct.insert(rndRow);
 
         if (ret.second) {

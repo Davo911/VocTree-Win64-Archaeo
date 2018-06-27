@@ -31,7 +31,7 @@ void initCenters(int normType, int K, Mat &inpData, Mat &outCenters) {
     int tries = 1000;
     while (tries-- > 0 && chosen < K) {
 
-        int rndRow = random() % inpData.rows;
+        int rndRow = rand() % inpData.rows;
 
         Mat selectedRow = inpData.row(rndRow);
         bool dup = false;
@@ -50,7 +50,7 @@ void initCenters(int normType, int K, Mat &inpData, Mat &outCenters) {
     }
 
     while (chosen < K) {
-        int rndRow = random() % inpData.rows;
+        int rndRow = rand() % inpData.rows;
         Mat selectedRow = inpData.row(rndRow);
         outCenters.push_back(selectedRow);
         chosen++;
