@@ -16,7 +16,7 @@
 
 #include <cv.hpp>
 #include <opencv2/highgui.hpp>
-#include <features.h>
+//#include <features.h>
 
 #include "Configuration.h"
 

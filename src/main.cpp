@@ -106,22 +106,22 @@ void buildDatabase(string dbPath, int argc, char **argv) {
 
     if (argc >= 4) {
 
-        if (strcasecmp(argv[3], "-reuse") == 0) {
+        if (_stricmp(argv[3], "-reuse") == 0) {
             reuseFeatures = true;
         }
-        else if (strcasecmp(argv[3], "-method") == 0) {
+        else if (_stricmp(argv[3], "-method") == 0) {
             if (argc >= 5) {
                 method = argv[4];
             }
 
             if (argc >= 7) {
-                if (strcasecmp(argv[5], "-vtp") == 0) {
+                if (_stricmp(argv[5], "-vtp") == 0) {
                     vtParams = argv[6];
                 }
             }
 
             if (argc >= 9) {
-                if (strcasecmp(argv[7], "-pca") == 0) {
+                if (_stricmp(argv[7], "-pca") == 0) {
                     strPCA = argv[8];
                 }
             }
@@ -310,31 +310,31 @@ void printHelpQuery(string cmd) {
 void printHelp(string cmd, string option) {
 
 
-    if (strcasecmp(option.c_str(), "build") == 0) {
+    if (_stricmp(option.c_str(), "build") == 0) {
         printHelpBuild(cmd);
     }
     else
-    if (strcasecmp(option.c_str(), "update") == 0) {
+    if (_stricmp(option.c_str(), "update") == 0) {
         printHelpUpdate();
     }
     else
-    if (strcasecmp(option.c_str(), "start") == 0) {
+    if (_stricmp(option.c_str(), "start") == 0) {
         printHelpStart();
     }
     else
-    if (strcasecmp(option.c_str(), "stop") == 0) {
+    if (_stricmp(option.c_str(), "stop") == 0) {
         printHelpStop();
     }
     else
-    if (strcasecmp(option.c_str(), "unlock") == 0) {
+    if (_stricmp(option.c_str(), "unlock") == 0) {
         printHelpUnlock();
     }
     else
-    if (strcasecmp(option.c_str(), "state") == 0) {
+    if (_stricmp(option.c_str(), "state") == 0) {
         printHelpState();
     }
     else
-    if (strcasecmp(option.c_str(), "query") == 0) {
+    if (_stricmp(option.c_str(), "query") == 0) {
         printHelpQuery(cmd);
     }
     else {
@@ -366,7 +366,7 @@ int main(int argc, char **argv) {
 
     string option = argv[1];
 
-    if (strcasecmp(option.c_str(), "-help") == 0) {
+    if (_stricmp(option.c_str(), "-help") == 0) {
 
         if (argc < 3) {
             printHelpOptions(cmd);
@@ -394,31 +394,31 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
-    if (strcasecmp(option.c_str(), "-build") == 0) {
+    if (_stricmp(option.c_str(), "-build") == 0) {
         buildDatabase(dbPath, argc, argv);
     }
     else
-    if (strcasecmp(option.c_str(), "-update") == 0) {
+    if (_stricmp(option.c_str(), "-update") == 0) {
         updateDatabase(dbPath);
     }
     else
-    if (strcasecmp(option.c_str(), "-start") == 0) {
+    if (_stricmp(option.c_str(), "-start") == 0) {
         startDatabase(dbPath);
     }
     else
-    if (strcasecmp(option.c_str(), "-stop") == 0) {
+    if (_stricmp(option.c_str(), "-stop") == 0) {
         stopDatabase(dbPath);
     }
     else
-    if (strcasecmp(option.c_str(), "-unlock") == 0) {
+    if (_stricmp(option.c_str(), "-unlock") == 0) {
         delStartingLock(dbPath);
     }
     else
-    if (strcasecmp(option.c_str(), "-state") == 0) {
+    if (_stricmp(option.c_str(), "-state") == 0) {
         cout << getState(dbPath) << endl;
     }
     else
-    if (strcasecmp(option.c_str(), "-query") == 0) {
+    if (_stricmp(option.c_str(), "-query") == 0) {
 
         if (argc < 4) {
             cerr << "ERR: must specify the query" << endl;

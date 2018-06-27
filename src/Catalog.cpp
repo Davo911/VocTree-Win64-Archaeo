@@ -39,6 +39,8 @@ void Catalog<T>::shrink(int size) {
 
 
 void storeInfo(ofstream &file, int i, DBElem info) {
+
+
     file
             << i << "\t"
             << info.featuresCount << "\t"

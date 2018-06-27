@@ -23,7 +23,7 @@ using namespace cv;
 
 
 bool startsWith(string str, string prefix) {
-    return (strcasecmp(prefix.c_str(), str.substr(0, prefix.size()).c_str()) == 0);
+    return (_stricmp(prefix.c_str(), str.substr(0, prefix.size()).c_str()) == 0);
 }
 
 string dropPrefix(string str, string prefix) {
@@ -186,11 +186,11 @@ void handleCommand(string command, int sockfd, Ptr<Database> &db) {
 
     //bool breaks = false;
 
-    if (strcasecmp(command.c_str(), "exit") == 0 ||
-        strcasecmp(command.c_str(), "quit") == 0) {
+    if (_stricmp(command.c_str(), "exit") == 0 ||
+        _stricmp(command.c_str(), "quit") == 0) {
         sendMessage(sockfd, "good bye.");
         //breaks = true;
-    } else if (strcasecmp(command.c_str(), "term") == 0) {
+    } else if (_stricmp(command.c_str(), "term") == 0) {
         sendMessage(sockfd, "terminating server.");
         kill(getppid(), SIGTERM);
         //breaks = true;
@@ -213,7 +213,7 @@ void processClient(int sockfd, Ptr<Database> &db) {
 
     string command = readCommand(sockfd);
 
-    if (strcasecmp(command.c_str(), "hello") == 0) {
+    if (_stricmp(command.c_str(), "hello") == 0) {
         sendMessage(sockfd, "hello :)");
     } else {
         handleCommand(command, sockfd, db);

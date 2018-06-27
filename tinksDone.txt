@@ -1,0 +1,2 @@
+feature.h auskommentiert
+strcasecmp to _stricmp
