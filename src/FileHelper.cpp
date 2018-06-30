@@ -8,15 +8,16 @@
 
 #include "FileHelper.h"
 
-#include <sys/stat.h>
+//#include <sys/stat.h>
 #include <stdio.h>
 #include <io.h>
-
+#include <direct.h>
 #include "dirent.h"
+#include "windows.h"
 
 #include <fstream>
 #include <string.h>
-
+#include <chrono>
 
 #include <algorithm>
 
@@ -68,7 +69,9 @@ FileHelper::createDir(const string path) {
 
     struct stat info;
     if (stat(path.c_str(), &info) == -1) {
-        mkdir(path.c_str(), 0700);
+        //mkdir(path.c_str(), 0700);
+		
+		
     }
 
 }
@@ -209,7 +212,7 @@ string
 FileHelper::currentPath() {
 
     char path[_PATH_MAX];
-    char *dir = getcwd(path, _PATH_MAX);
+    char *dir = _getcwd(path, _PATH_MAX);
     dir++;
     string ret(path);
     return ret;

@@ -6,16 +6,22 @@
 //version. You should have received a copy of this license along
 //this program. If not, see <http://www.gnu.org/licenses/>.
 
-#include "Server.h"
 
+#include <winsock2.h>
+#include <windows.h>
+
+#include <tlhelp32.h>
+#include <stdio.h>
+#include "Server.h"
+#include <process.h>
 #include "FileHelper.h"
 
-#include <netinet/in.h>
-#include <signal.h>
-#include <sys/socket.h>
+//#include <netinet/in.h>
+//#include <signal.h>
+//#include <sys/socket.h>
 #include <iostream>
-#include <unistd.h>
-#include <netdb.h>
+//#include <unistd.h>
+//#include <netdb.h>
 
 
 using namespace std;
@@ -33,11 +39,44 @@ string dropPrefix(string str, string prefix) {
 void log(string message) {
 
     stringstream ss;
-    ss << "[" << getpid() << "] " << message << endl;
+    ss << "[" << _getpid() << "] " << message << endl;
     cout << ss.str();
 
 }
+void kill_by_pid(int pid)
+{
+	HANDLE handy;
+	handy = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, TRUE, pid);
+	TerminateProcess(handy, 0);
+}
 
+DWORD getppid()
+{
+	HANDLE hSnapshot = INVALID_HANDLE_VALUE;
+	PROCESSENTRY32 pe32;
+	DWORD ppid = 0, pid = GetCurrentProcessId();
+
+	hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	__try {
+		if (hSnapshot == INVALID_HANDLE_VALUE) __leave;
+
+		ZeroMemory(&pe32, sizeof(pe32));
+		pe32.dwSize = sizeof(pe32);
+		if (!Process32First(hSnapshot, &pe32)) __leave;
+
+		do {
+			if (pe32.th32ProcessID == pid) {
+				ppid = pe32.th32ParentProcessID;
+				break;
+			}
+		} while (Process32Next(hSnapshot, &pe32));
+
+	}
+	__finally {
+		if (hSnapshot != INVALID_HANDLE_VALUE) CloseHandle(hSnapshot);
+	}
+	return ppid;
+}
 void sendMessage(int sockfd, string message) {
 
     log(message);
@@ -45,7 +84,7 @@ void sendMessage(int sockfd, string message) {
     stringstream ss;
     ss << message << endl;
 
-    int n = write(sockfd, ss.str().c_str(), ss.str().size());
+    auto n = write(sockfd, ss.str().c_str(), ss.str().size());
     if (n < 0) {
         cerr << "SENDING MSG: error writing to socket" << endl;
         exit(1);
@@ -64,12 +103,14 @@ sendCommand(string host, int port, string command) {
     }
 
     struct sockaddr_in serv_addr;
-    bzero((char *) &serv_addr, sizeof(serv_addr));
+	//bzero...
+	memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
 
     struct hostent *server;
     server = gethostbyname(host.c_str());
-    bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr, server->h_length);
+    //bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr, server->h_length);
+	memcpy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(port);
 
     // Now connect to the server
@@ -87,8 +128,8 @@ sendCommand(string host, int port, string command) {
 
     // Now read server response
     char buffer[256];
-    bzero(buffer, 256);
-
+    //bzero(buffer, 256);
+	memset(buffer, 0 ,256);
     string ret = "";
     while ((n = read(sockfd, buffer, 255)) > 0) {
         string s(buffer, n);
@@ -113,8 +154,8 @@ readCommand(int newsockfd) {
     int n;
     char buffer[256];
 
-    bzero(buffer, 256);
-
+    //bzero(buffer, 256);
+	memset(buffer, 0, 256);
     n = read(newsockfd, buffer, 256);
     if (n < 0) {
         cerr << "error reading from socket." << endl;
@@ -192,7 +233,8 @@ void handleCommand(string command, int sockfd, Ptr<Database> &db) {
         //breaks = true;
     } else if (_stricmp(command.c_str(), "term") == 0) {
         sendMessage(sockfd, "terminating server.");
-        kill(getppid(), SIGTERM);
+        //kill(getppid(), SIGTERM);
+		kill_by_pid(getppid());
         //breaks = true;
     } else if (startsWith(command, "query ")) {
         string query = dropPrefix(command, "query ");
@@ -252,7 +294,8 @@ void listenForClients(int port, Ptr<Database> db) {
     struct sockaddr_in serv_addr;
 
     //Initialize socket structure
-    bzero((char *) &serv_addr, sizeof(serv_addr));
+    //bzero((char *) &serv_addr, sizeof(serv_addr));
+	memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(port);
@@ -274,13 +317,13 @@ void listenForClients(int port, Ptr<Database> db) {
 
 
     //Now bind the host address using bind() call
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) == SOCKET_ERROR) {
         cerr << "cannot bind socket." << endl;
         exit(1);
     }
 
     struct sockaddr_in cli_addr;
-    socklen_t clilen;
+    int clilen;
 
     clilen = sizeof(cli_addr);
     cout << "database listening on port: " << port << endl;
@@ -301,12 +344,12 @@ void listenForClients(int port, Ptr<Database> db) {
         }
 
 
-        //Create child process
+        /*/Create child process
         int pid = fork();
         if (pid < 0) {
             cerr << "error creating new process (fork)." << endl;
             exit(1);
-        }
+        }*/
 
         if (pid == 0) {
             //This is the client process

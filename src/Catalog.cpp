@@ -61,10 +61,7 @@ void storeInfo(ofstream &file, int i, Group grp) {
 }
 
 void storeInfo(ofstream &file, int i, VideoInfo info) {
-    file
-            << i << "\t"
-            << info.fileName
-            << endl;
+    file << i + "\t" + info.fileName << endl;
 }
 
 template<class T>
