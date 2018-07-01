@@ -10,7 +10,7 @@
 
 //#include <sys/stat.h>
 #include <stdio.h>
-#include <io.h>
+#include <iostream>
 #include <direct.h>
 #include "dirent.h"
 #include "windows.h"
@@ -70,7 +70,7 @@ FileHelper::createDir(const string path) {
     struct stat info;
     if (stat(path.c_str(), &info) == -1) {
         //mkdir(path.c_str(), 0700);
-		
+		CreateDirectory(path.c_str(), NULL);
 		
     }
 
@@ -149,7 +149,7 @@ FileHelper::listDir(const string path_base, const string path_rel, vector<Entry>
 
     // checks if it was opened correctly
     if (!d) {
-        cerr << "can't open directory " << path << endl;
+        cerr << "can't open directory" << path.c_str() << " ." << endl;
         exit(EXIT_FAILURE);
     }
 

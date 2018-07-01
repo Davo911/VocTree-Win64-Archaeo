@@ -7,6 +7,7 @@
 //this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include "Catalog.h"
+#include <string>
 
 template<class T>
 void Catalog<T>::add(T info) {
@@ -44,7 +45,7 @@ void storeInfo(ofstream &file, int i, DBElem info) {
     file
             << i << "\t"
             << info.featuresCount << "\t"
-            << info.name
+            << info.name.c_str()
             << endl;
 
 }
@@ -54,8 +55,8 @@ void storeInfo(ofstream &file, int i, Group grp) {
     file
             << i << "\t"
             << grp.id << "\t"
-            << grp.objCount << "\t"
-            << grp.description
+            << std::to_string(grp.objCount).c_str() << "\t"
+            << grp.description.c_str()
             << endl;
 
 }

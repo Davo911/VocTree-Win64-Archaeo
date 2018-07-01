@@ -1,4 +1,4 @@
-//Copyright (C) 2016, Esteban Uriza <estebanuri@gmail.com>
+/*/Copyright (C) 2016, Esteban Uriza <estebanuri@gmail.com>
 //This program is free software: you can use, modify and/or
 //redistribute it under the terms of the GNU General Public
 //License as published by the Free Software Foundation, either
@@ -344,12 +344,12 @@ void listenForClients(int port, Ptr<Database> db) {
         }
 
 
-        /*/Create child process
+        //Create child process
         int pid = fork();
         if (pid < 0) {
             cerr << "error creating new process (fork)." << endl;
             exit(1);
-        }*/
+        }
 
         if (pid == 0) {
             //This is the client process
@@ -523,3 +523,4 @@ void stopDatabase(string dbPath) {
     }
 
 }
+*/
