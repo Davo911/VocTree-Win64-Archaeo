@@ -10,7 +10,10 @@
 #ifndef SERVER_H_
 #define SERVER_H_
 
+
+
 #include <string.h>
+#include "Fork.h"
 #include <cv.hpp>
 
 #include "Database.h"
@@ -23,7 +26,7 @@
  */
 
 using namespace std;
-using namespace cv;
+//using namespace cv;
 
 
 /**
@@ -81,4 +84,4 @@ void delStartingLock(string dbPath);
 void runQuery(string dbPath, string query);
 
 
-#endif /* SERVER_H_ */
+#endif SERVER_H_ 

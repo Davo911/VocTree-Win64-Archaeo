@@ -1,2 +1,9 @@
 feature.h auskommentiert
 strcasecmp to _stricmp
+adding includes
+mkdir to CreateDirectory
+getppid()
+kill_by_pid()
+bzero/bcopy to memset/memcpy
+random() to rand()
+added ext header "dirent.h" Win port

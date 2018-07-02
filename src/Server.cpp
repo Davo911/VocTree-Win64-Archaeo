@@ -1,13 +1,13 @@
-/*/Copyright (C) 2016, Esteban Uriza <estebanuri@gmail.com>
+//Copyright (C) 2016, Esteban Uriza <estebanuri@gmail.com>
 //This program is free software: you can use, modify and/or
 //redistribute it under the terms of the GNU General Public
 //License as published by the Free Software Foundation, either
 //version 3 of the License, or (at your option) any later
 //version. You should have received a copy of this license along
 //this program. If not, see <http://www.gnu.org/licenses/>.
-
-
 #include <winsock2.h>
+#include <ws2tcpip.h>
+#pragma comment(lib,"ws2_32.lib") //Winsock Library
 #include <windows.h>
 
 #include <tlhelp32.h>
@@ -19,9 +19,10 @@
 //#include <netinet/in.h>
 //#include <signal.h>
 //#include <sys/socket.h>
-#include <iostream>
 //#include <unistd.h>
 //#include <netdb.h>
+#include <iostream>
+
 
 
 using namespace std;
@@ -77,14 +78,14 @@ DWORD getppid()
 	}
 	return ppid;
 }
-void sendMessage(int sockfd, string message) {
+void sendMessage(SOCKET sockfd, string message) {
 
     log(message);
 
     stringstream ss;
     ss << message << endl;
-
-    auto n = write(sockfd, ss.str().c_str(), ss.str().size());
+	int n = send(sockfd, ss.str().c_str(), ss.str().size(), 0);
+    //auto n = write(sockfd, ss.str().c_str(), ss.str().size());
     if (n < 0) {
         cerr << "SENDING MSG: error writing to socket" << endl;
         exit(1);
@@ -96,7 +97,7 @@ string
 sendCommand(string host, int port, string command) {
 
     // Create a socket point
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         cerr << "ERROR opening socket" << endl;
         throw (-1);
@@ -119,8 +120,8 @@ sendCommand(string host, int port, string command) {
         throw (-1);
     }
 
-    int n = write(sockfd, command.c_str(), command.length());
-
+    //int n = write(sockfd, command.c_str(), command.length());
+	int n = send(sockfd, command.c_str(), command.length(), 0);
     if (n < 0) {
         cerr << "ERROR writing to socket" << endl;
         throw (-1);
@@ -131,7 +132,8 @@ sendCommand(string host, int port, string command) {
     //bzero(buffer, 256);
 	memset(buffer, 0 ,256);
     string ret = "";
-    while ((n = read(sockfd, buffer, 255)) > 0) {
+    //while ((n = read(sockfd, buffer, 255)) > 0) {
+	while ((n = recv(sockfd,buffer,255,0)) > 0){
         string s(buffer, n);
         ret += s;
     }
@@ -156,7 +158,8 @@ readCommand(int newsockfd) {
 
     //bzero(buffer, 256);
 	memset(buffer, 0, 256);
-    n = read(newsockfd, buffer, 256);
+    //n = read(newsockfd, buffer, 256);
+	n = recv(newsockfd, buffer, 256, 0);
     if (n < 0) {
         cerr << "error reading from socket." << endl;
         exit(1);
@@ -170,7 +173,7 @@ readCommand(int newsockfd) {
 }
 
 
-void handleQuery(string query, int sockfd, Ptr<Database> &db) {
+void handleQuery(string query, SOCKET sockfd, Ptr<Database> &db) {
 
     //msg()
     string msg;
@@ -211,7 +214,8 @@ void handleQuery(string query, int sockfd, Ptr<Database> &db) {
         stringstream ss;
         ss << score << "," << m.id << ", " << info.fileName << endl;
 
-        int n = write(sockfd, ss.str().c_str(), ss.str().size());
+        //int n = write(sockfd, ss.str().c_str(), ss.str().size());
+		int n = send(sockfd, ss.str().c_str(), ss.str().size(), 0);
         if (n < 0) {
             cerr << "writing response: error writing to socket" << endl;
             exit(1);
@@ -223,7 +227,7 @@ void handleQuery(string query, int sockfd, Ptr<Database> &db) {
 }
 
 
-void handleCommand(string command, int sockfd, Ptr<Database> &db) {
+void handleCommand(string command, SOCKET sockfd, Ptr<Database> &db) {
 
     //bool breaks = false;
 
@@ -248,7 +252,7 @@ void handleCommand(string command, int sockfd, Ptr<Database> &db) {
 }
 
 
-void processClient(int sockfd, Ptr<Database> &db) {
+void processClient(SOCKET sockfd, Ptr<Database> &db) {
 
     string msg = "started";
     log("process start");
@@ -261,7 +265,13 @@ void processClient(int sockfd, Ptr<Database> &db) {
         handleCommand(command, sockfd, db);
     }
 
-    close(sockfd);
+    //close(sockfd);
+	int iResult = closesocket(sockfd);
+	if (iResult == SOCKET_ERROR) {
+		wprintf(L"close failed with error: %d\n", WSAGetLastError());
+		WSACleanup();
+		exit(1);
+	}
 
     log("process end");
 
@@ -285,7 +295,7 @@ readConfig(string dbPath) {
 
 void listenForClients(int port, Ptr<Database> db) {
 
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         cerr << "error opening socket." << endl;
         exit(1);
@@ -299,10 +309,18 @@ void listenForClients(int port, Ptr<Database> db) {
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(port);
+	WSADATA wsa;
+
+	// Initialize Winsock
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsa);
+	if (iResult != 0) {
+		wprintf(L"WSAStartup failed: %d\n", iResult);
+		exit(1);
+	}
 
     // re-use socket when has been killed recently
     int val = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(int));
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *) &val, sizeof(int));
 
     // sets socket timeout.
     // if it doesn't receive queries for a while, it auto-terminates
@@ -325,7 +343,7 @@ void listenForClients(int port, Ptr<Database> db) {
     struct sockaddr_in cli_addr;
     int clilen;
 
-    clilen = sizeof(cli_addr);
+    clilen = sizeof(cli_addr); 
     cout << "database listening on port: " << port << endl;
 
     listen(sockfd, 5);
@@ -353,7 +371,13 @@ void listenForClients(int port, Ptr<Database> db) {
 
         if (pid == 0) {
             //This is the client process
-            close(sockfd);
+            //close(sockfd);
+			int iResult = closesocket(sockfd);
+			if (iResult == SOCKET_ERROR) {
+				wprintf(L"close failed with error: %d\n", WSAGetLastError());
+				WSACleanup();
+				exit(1);
+			}
 
             processClient(newsockfd, db);
 
@@ -362,7 +386,13 @@ void listenForClients(int port, Ptr<Database> db) {
 
         } else {
 
-            close(newsockfd);
+            //close(newsockfd);
+			int iResult = closesocket(newsockfd);
+			if (iResult == SOCKET_ERROR) {
+				wprintf(L"close failed with error: %d\n", WSAGetLastError());
+				WSACleanup();
+				exit(1);
+			}
 
         }
 
@@ -523,4 +553,3 @@ void stopDatabase(string dbPath) {
     }
 
 }
-*/

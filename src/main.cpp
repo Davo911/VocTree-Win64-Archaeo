@@ -17,7 +17,7 @@
 #include "Database.h"
 
 
-//#include "Server.h"
+#include "Server.h"
 
 
 using namespace std;
@@ -393,8 +393,8 @@ int main(int argc, char **argv) {
         cerr << "could not find database " << dbPath << "." << endl;
         exit(-1);
     }
-
-    /*if (_stricmp(option.c_str(), "-build") == 0) {
+	//SERVER STUFF
+    if (_stricmp(option.c_str(), "-build") == 0) {
         buildDatabase(dbPath, argc, argv);
     }
     else
@@ -430,7 +430,7 @@ int main(int argc, char **argv) {
 
         runQuery(dbPath, query);
 
-    }*/
+    }
     else {
 
         cerr << "unknow option" << endl;
