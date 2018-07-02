@@ -31,6 +31,8 @@ set(SOURCES
         VecPersistor.hpp
         VocTree.cpp
         VocTree.h
+	Fork.cpp
+	Fork.h
 ) # SOURCES
 
 add_executable(${NAME} 	${SOURCES})
