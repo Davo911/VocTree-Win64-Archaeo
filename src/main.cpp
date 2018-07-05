@@ -399,10 +399,12 @@ int main(int argc, char **argv) {
     }
     else
     if (_stricmp(option.c_str(), "-update") == 0) {
+		cout << "Updating...";
         updateDatabase(dbPath);
     }
     else
     if (_stricmp(option.c_str(), "-start") == 0) {
+		cout << "Starting..." << endl;
         startDatabase(dbPath);
     }
     else
@@ -437,9 +439,6 @@ int main(int argc, char **argv) {
         printHelpOptions(cmd);
 
     }
-
-
     return 0;
-
 }
 
