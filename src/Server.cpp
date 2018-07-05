@@ -9,13 +9,13 @@
 #include <ws2tcpip.h>
 #pragma comment(lib,"ws2_32.lib") //Winsock Library
 #include <windows.h>
-
+#include <thread>
 #include <tlhelp32.h>
 #include <stdio.h>
 #include "Server.h"
 #include <process.h>
 #include "FileHelper.h"
-
+#include <string>
 //#include <netinet/in.h>
 //#include <signal.h>
 //#include <sys/socket.h>
@@ -32,11 +32,9 @@ using namespace cv;
 bool startsWith(string str, string prefix) {
     return (_stricmp(prefix.c_str(), str.substr(0, prefix.size()).c_str()) == 0);
 }
-
 string dropPrefix(string str, string prefix) {
     return str.substr(prefix.size());
 }
-
 void log(string message) {
 
     stringstream ss;
@@ -50,7 +48,6 @@ void kill_by_pid(int pid)
 	handy = OpenProcess(SYNCHRONIZE | PROCESS_TERMINATE, TRUE, pid);
 	TerminateProcess(handy, 0);
 }
-
 DWORD getppid()
 {
 	HANDLE hSnapshot = INVALID_HANDLE_VALUE;
@@ -95,31 +92,50 @@ void sendMessage(SOCKET sockfd, string message) {
 
 string
 sendCommand(string host, int port, string command) {
-
-    // Create a socket point
-    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        cerr << "ERROR opening socket" << endl;
-        throw (-1);
-    }
-
+	SOCKET sockfd;
+	WSADATA wsa;
     struct sockaddr_in serv_addr;
-	//bzero...
+    struct hostent *server;
+
+	// Initialize Winsock
+	int iResult = WSAStartup(MAKEWORD(2, 2), &wsa);
+	if (iResult != 0) {
+		wprintf(L"WSAStartup failed: %d\n", iResult);
+		exit(1);
+	}
+	//Create a socket
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
+	{
+		cerr << "Could not create socket : %d" << WSAGetLastError();
+	}
+
+	cout << "Socket created" << endl;
+
+    //Prepare the sockaddr_in structure
 	memset((char *)&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
-
-    struct hostent *server;
     server = gethostbyname(host.c_str());
-    //bcopy((char *) server->h_addr, (char *) &serv_addr.sin_addr.s_addr, server->h_length);
 	memcpy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(port);
-
+    
     // Now connect to the server
-    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        //cerr << "ERROR connecting" << endl;
+    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))  == SOCKET_ERROR) {
+		int err = WSAGetLastError();
+		char msgbuf[256];
+		msgbuf[0] = '\0';
+		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,   // flags
+			NULL,                // lpsource
+			err,                 // message id
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),    // languageid
+			msgbuf,              // output buffer
+			sizeof(msgbuf),     // size of msgbuf, bytes
+			NULL);               // va_list of arguments
+
+		cerr << "ERROR connecting:    " << msgbuf << endl;
+
         throw (-1);
     }
-
+	
     //int n = write(sockfd, command.c_str(), command.length());
 	int n = send(sockfd, command.c_str(), command.length(), 0);
     if (n < 0) {
@@ -294,21 +310,7 @@ readConfig(string dbPath) {
 }
 
 void listenForClients(int port, Ptr<Database> db) {
-
-    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        cerr << "error opening socket." << endl;
-        exit(1);
-    }
-
     struct sockaddr_in serv_addr;
-
-    //Initialize socket structure
-    //bzero((char *) &serv_addr, sizeof(serv_addr));
-	memset((char *)&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port);
 	WSADATA wsa;
 
 	// Initialize Winsock
@@ -317,6 +319,19 @@ void listenForClients(int port, Ptr<Database> db) {
 		wprintf(L"WSAStartup failed: %d\n", iResult);
 		exit(1);
 	}
+
+    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == INVALID_SOCKET) {
+        cerr << "error opening socket." << endl;
+        exit(1);
+    }
+
+    //Initialize socket structure
+	memset((char *)&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(port);
+
 
     // re-use socket when has been killed recently
     int val = 1;
@@ -335,7 +350,7 @@ void listenForClients(int port, Ptr<Database> db) {
 
 
     //Now bind the host address using bind() call
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) == SOCKET_ERROR) {
+    if (::bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) == SOCKET_ERROR) {
         cerr << "cannot bind socket." << endl;
         exit(1);
     }
@@ -348,21 +363,45 @@ void listenForClients(int port, Ptr<Database> db) {
 
     listen(sockfd, 5);
 
-    bool term = false;
-    while (!term) {
+	bool term = false;
+	while (!term) {
+		SOCKET newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
-        int newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-        if (newsockfd < 0) {
-
-            cout << "terminating server due to inactivity of (" << timeout.tv_sec << ") secs." << endl;
-
-            term = true;
-            continue;
-
-        }
+		if (newsockfd == INVALID_SOCKET) {
+			cout << "terminating server due to inactivity of (" << timeout.tv_sec << ") secs." << endl;
+			term = true;
+			continue;
 
 
-        //Create child process
+			std::thread child([sockfd, &cli_addr, &clilen, timeout, newsockfd] {
+
+				int iResult = closesocket(newsockfd);
+				if (iResult == SOCKET_ERROR) {
+					wprintf(L"close failed with error: %d\n", WSAGetLastError());
+					WSACleanup();
+					exit(1);
+				}
+			});
+
+			//This is the client process
+			//close(sockfd);
+			int iResult = closesocket(sockfd);
+			if (iResult == SOCKET_ERROR) {
+				wprintf(L"close failed with error: %d\n", WSAGetLastError());
+				WSACleanup();
+				exit(1);
+			}
+
+			processClient(newsockfd, db);
+
+			cout << "process query" << endl;
+			exit(0);
+		}
+	}
+
+
+
+        /*/Create child process
         int pid = fork();
         if (pid < 0) {
             cerr << "error creating new process (fork)." << endl;
@@ -394,10 +433,7 @@ void listenForClients(int port, Ptr<Database> db) {
 				exit(1);
 			}
 
-        }
-
-    }
-
+        }*/
 
 }
 
@@ -426,9 +462,11 @@ bool isStarted(int port) {
 
     try {
         string ret = sendCommand(host, port, command);
+		cout << "Testcommand: " << command << "sent" << endl;
         return true;
     }
-    catch (int ex) {
+    catch (const std::exception& e) {
+		cout << e.what();
         return false;
     }
 
@@ -454,18 +492,23 @@ void delStartingLock(string dbPath) {
 }
 
 void startDatabase(string dbPath) {
+	cout << "Attempting to start the Database..." << endl;
 
     int port = getPort(dbPath);
+	cout << "Got Port :" << port << endl;
 
     if (isStarted(port)) {
         cout << "database is STARTED" << endl;
         return;
     }
+	cout << "isStarted -- DONE" << endl;
 
     if (isStarting(dbPath)) {
         cout << "database is STARTING" << endl;
         return;
     }
+
+	cout << "isStarting -- DONE" << endl;
 
     // Ok, the server is stopped.
 
