@@ -1,0 +1,1 @@
+C:\Users\David\Documents\GitHub\VocTree-Win64-Archaeo\build\src\Release\engine.exe -query C:\Users\David\Desktop\VocTreeDatasets\Dataset1\input\GOPR2581_seq_0_13_f189.jpg
