@@ -92,10 +92,13 @@ void sendMessage(SOCKET sockfd, string message) {
 
 string
 sendCommand(string host, int port, string command) {
-	SOCKET sockfd;
 	WSADATA wsa;
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
+	SOCKET sockfd = INVALID_SOCKET;
+	//struct sockaddr_in serv_addr;
+	//struct hostent *server;
+	struct addrinfo *result = NULL,
+		*ptr = NULL,
+		hints;
 
 	// Initialize Winsock
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -103,45 +106,56 @@ sendCommand(string host, int port, string command) {
 		wprintf(L"WSAStartup failed: %d\n", iResult);
 		exit(1);
 	}
-	//Create a socket
-	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
-	{
-		cerr << "Could not create socket : %d" << WSAGetLastError();
+	ZeroMemory(&hints, sizeof(hints));
+	//Prepare the sockaddr_in structure
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	// Resolve the server address and port
+	iResult = getaddrinfo(host.c_str(), to_string(port).c_str(), &hints, &result);
+	if (iResult != 0) {
+		printf("getaddrinfo failed with error: %d\n", iResult);
+		WSACleanup();
+		exit(1);
 	}
 
-	cout << "Socket created" << endl;
+	// Attempt to connect to an address until one succeeds
+	for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
+		sockfd = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (sockfd == INVALID_SOCKET) {
+			printf("socket failed with error: %ld\n", WSAGetLastError());
+			WSACleanup();
+			exit(1);
+		}
+		cout << "Socket created" << endl;
+		// Connect to server.
+		iResult = connect(sockfd, ptr->ai_addr, (int)ptr->ai_addrlen);
+		if (iResult == SOCKET_ERROR) {
+			printf("failed to connect: %ld\n", WSAGetLastError());
+			closesocket(sockfd);
+			sockfd = INVALID_SOCKET;
+			continue;
+		}
+		std::cout << "Client connected!" << std::endl;
+		break;
+	}
+	freeaddrinfo(result);
 
-    //Prepare the sockaddr_in structure
-	memset((char *)&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    server = gethostbyname(host.c_str());
-	memcpy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-    serv_addr.sin_port = htons(port);
-    
-    // Now connect to the server
-    if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr))  == SOCKET_ERROR) {
-		int err = WSAGetLastError();
-		char msgbuf[256];
-		msgbuf[0] = '\0';
-		FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,   // flags
-			NULL,                // lpsource
-			err,                 // message id
-			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),    // languageid
-			msgbuf,              // output buffer
-			sizeof(msgbuf),     // size of msgbuf, bytes
-			NULL);               // va_list of arguments
+	if (sockfd == INVALID_SOCKET) {
+		printf("Unable to connect to server!\n");
+		WSACleanup();
+		exit(1);
+	}
 
-		cerr << "ERROR connecting:    " << msgbuf << endl;
-
-        throw (-1);
-    }
-	
     //int n = write(sockfd, command.c_str(), command.length());
 	int n = send(sockfd, command.c_str(), command.length(), 0);
-    if (n < 0) {
-        cerr << "ERROR writing to socket" << endl;
-        throw (-1);
-    }
+	if (n == SOCKET_ERROR) {
+		printf("send failed with error: %d\n", WSAGetLastError());
+		closesocket(sockfd);
+		WSACleanup();
+		exit(1);
+	}
 
     // Now read server response
     char buffer[256];
@@ -310,8 +324,14 @@ readConfig(string dbPath) {
 }
 
 void listenForClients(int port, Ptr<Database> db) {
-    struct sockaddr_in serv_addr;
+    //struct sockaddr_in serv_addr;
 	WSADATA wsa;
+	SOCKET sockfd = INVALID_SOCKET;
+
+	struct addrinfo *result = NULL;
+	struct addrinfo hints;
+	char recvbuf[256];
+	int recvbuflen = 256;
 
 	// Initialize Winsock
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -320,18 +340,31 @@ void listenForClients(int port, Ptr<Database> db) {
 		exit(1);
 	}
 
-    SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    //Initialize socket structure
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	hints.ai_flags = AI_PASSIVE;
+	//memset((char *)&serv_addr, 0, sizeof(serv_addr));
+    //serv_addr.sin_family = AF_INET;
+    //serv_addr.sin_addr.s_addr = INADDR_ANY;
+    //serv_addr.sin_port = htons(port);
+
+	// Resolve the server address and port
+	iResult = getaddrinfo(NULL, std::to_string(port).c_str(), &hints, &result);
+	if (iResult != 0) {
+		printf("getaddrinfo failed with error: %d\n", iResult);
+		WSACleanup();
+		exit(1);
+	}
+
+	// Create a SOCKET for connecting to server
+    sockfd = socket(result->ai_family, result->ai_socktype, 0);
     if (sockfd == INVALID_SOCKET) {
         cerr << "error opening socket." << endl;
         exit(1);
     }
-
-    //Initialize socket structure
-	memset((char *)&serv_addr, 0, sizeof(serv_addr));
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port);
-
 
     // re-use socket when has been killed recently
     int val = 1;
@@ -342,7 +375,6 @@ void listenForClients(int port, Ptr<Database> db) {
     struct timeval timeout;
     timeout.tv_sec = 5 * 60;
     timeout.tv_usec = 0;
-
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *) &timeout, sizeof(timeout)) < 0) {
         cerr << "set socket option failed" << endl;
         exit(1);
@@ -350,31 +382,35 @@ void listenForClients(int port, Ptr<Database> db) {
 
 
     //Now bind the host address using bind() call
-    if (::bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) == SOCKET_ERROR) {
-        cerr << "cannot bind socket." << endl;
-        exit(1);
+    if (::bind(sockfd, result->ai_addr, (int)result->ai_addrlen) == SOCKET_ERROR) {
+		printf("bind failed with error: %d\n", WSAGetLastError());
+		freeaddrinfo(result);
+		closesocket(sockfd);
+		WSACleanup();
+		exit(1);
     }
 
-    struct sockaddr_in cli_addr;
-    int clilen;
+	freeaddrinfo(result);
+    //struct sockaddr_in cli_addr;
+    //int clilen = sizeof(cli_addr);
 
-    clilen = sizeof(cli_addr); 
     cout << "database listening on port: " << port << endl;
 
     listen(sockfd, 5);
 
 	bool term = false;
 	while (!term) {
-		SOCKET newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		SOCKET newsockfd = accept(sockfd, NULL, NULL);
 
 		if (newsockfd == INVALID_SOCKET) {
-			cout << "terminating server due to inactivity of (" << timeout.tv_sec << ") secs." << endl;
+			printf("accept failed with error: %d\n", WSAGetLastError());
+			closesocket(sockfd);
+			WSACleanup();
 			term = true;
 			continue;
 
-
-			std::thread child([sockfd, &cli_addr, &clilen, timeout, newsockfd] {
-
+			//creating "child"-thread???????????
+			std::thread child([&sockfd, &timeout, &newsockfd] {
 				int iResult = closesocket(newsockfd);
 				if (iResult == SOCKET_ERROR) {
 					wprintf(L"close failed with error: %d\n", WSAGetLastError());
