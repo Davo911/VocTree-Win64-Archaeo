@@ -16,11 +16,6 @@
 #include <process.h>
 #include "FileHelper.h"
 #include <string>
-//#include <netinet/in.h>
-//#include <signal.h>
-//#include <sys/socket.h>
-//#include <unistd.h>
-//#include <netdb.h>
 #include <iostream>
 
 
@@ -96,6 +91,7 @@ sendCommand(string host, int port, string command) {
 	SOCKET sockfd = INVALID_SOCKET;
 	SOCKADDR_IN ServerAddr;
 	struct hostent *server;
+	int n;
 
 	// Initialize Winsock
 	int iResult = WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -117,20 +113,22 @@ sendCommand(string host, int port, string command) {
 	ZeroMemory(&ServerAddr, sizeof(ServerAddr));
 	ServerAddr.sin_family = AF_INET;
 	ServerAddr.sin_port = htons(port);
-	server = gethostbyname(host.c_str());
-	memcpy((char *)server->h_addr, (char *)&ServerAddr.sin_addr.s_addr, server->h_length);
+	ServerAddr.sin_addr.s_addr = inet_addr(host.c_str());
+	//server = gethostbyname(host.c_str());
+	//memcpy((char *)server->h_addr, (char *)&ServerAddr.sin_addr.s_addr, server->h_length);
 
 	// Now connect to the server
 	iResult = connect(sockfd, (SOCKADDR *)&ServerAddr, sizeof(ServerAddr));
 	if (iResult == SOCKET_ERROR) {
 		printf("failed to connect: %ld\n", WSAGetLastError());
 		closesocket(sockfd);
-		sockfd = INVALID_SOCKET;
+		//sockfd = INVALID_SOCKET;
 		throw (-1);
+
 	}
 	std::cout << "Client connected!" << std::endl;
 
-	int n = send(sockfd, command.c_str(), command.length(), 0);
+	n = send(sockfd, command.c_str(), command.length(), 0);
 	if (n == SOCKET_ERROR) {
 		printf("send failed with error: %d\n", WSAGetLastError());
 		closesocket(sockfd);
@@ -152,7 +150,7 @@ sendCommand(string host, int port, string command) {
         cerr << "ERROR reading from socket" << endl;
         throw (-1);
     }
-
+	
     return ret;
 
 }
@@ -346,7 +344,7 @@ void listenForClients(int port, Ptr<Database> db) {
 
 
     //Now bind the host address using bind() call
-    if (::bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR) {
+    if (::bind(sockfd, (sockaddr *)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR) {
 		printf("bind failed with error: %d\n", WSAGetLastError());
 		closesocket(sockfd);
 		WSACleanup();
@@ -359,7 +357,7 @@ void listenForClients(int port, Ptr<Database> db) {
 
 	bool term = false;
 	while (!term) {
-		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		newsockfd = accept(sockfd, NULL, NULL);//(sockaddr *) &cli_addr, &clilen);
 		if (newsockfd == INVALID_SOCKET) {
 			printf("accept failed with error: %d\n", WSAGetLastError());
 			closesocket(sockfd);
@@ -367,68 +365,39 @@ void listenForClients(int port, Ptr<Database> db) {
 			term = true;
 			continue;
 		}
-		else { cout << "Connection Accepted!" << endl; }
+
+
+
+	
+
+
 
 
 		//creating "child"-thread???????????
 		std::thread child([&newsockfd,&db] {
-			processClient(newsockfd, db);
-			cout << "process query" << endl;
-			int iResult = closesocket(newsockfd);
-			if (iResult == SOCKET_ERROR) {
-				wprintf(L"close failed with error: %d\n", WSAGetLastError());
-				WSACleanup();
-				exit(1);
-			}
-			exit(0);
+
+
+		cout << "process query..." << endl;
+		processClient(newsockfd, db);
+
+			
 		});
 
-		iResult = closesocket(sockfd);
-		if (iResult == SOCKET_ERROR) {
-			wprintf(L"close failed with error: %d\n", WSAGetLastError());
-			WSACleanup();
-			exit(1);
-		}
+		child.join();
+	}
 
-
+	if (closesocket(sockfd) == SOCKET_ERROR) {
+		wprintf(L"close failed with error: %d\n", WSAGetLastError());
+		WSACleanup();
+		exit(1);
 	}
 
 
-
-        /*/Create child process
-        int pid = fork();
-        if (pid < 0) {
-            cerr << "error creating new process (fork)." << endl;
-            exit(1);
-        }
-
-        if (pid == 0) {
-            //This is the client process
-            //close(sockfd);
-			int iResult = closesocket(sockfd);
-			if (iResult == SOCKET_ERROR) {
-				wprintf(L"close failed with error: %d\n", WSAGetLastError());
-				WSACleanup();
-				exit(1);
-			}
-
-            processClient(newsockfd, db);
-
-            cout << "process query" << endl;
-            exit(0);
-
-        } else {
-
-            //close(newsockfd);
-			int iResult = closesocket(newsockfd);
-			if (iResult == SOCKET_ERROR) {
-				wprintf(L"close failed with error: %d\n", WSAGetLastError());
-				WSACleanup();
-				exit(1);
-			}
-
-        }*/
-
+	if (closesocket(newsockfd) == SOCKET_ERROR) {
+		wprintf(L"close failed with error: %d\n", WSAGetLastError());
+		WSACleanup();
+		exit(1);
+	}
 }
 
 
@@ -451,7 +420,7 @@ int getPort(string dbPath) {
 
 bool isStarted(int port) {
 
-    string host = "localhost";
+    string host = "127.0.0.1";
     string command = "hello";
 
     try {
@@ -491,20 +460,21 @@ void startDatabase(string dbPath) {
     int port = getPort(dbPath);
 	cout << "Got Port :" << port << endl;
 
+	/*/test if DB-Server already started    ########bricht beim connecten ab????
     if (isStarted(port)) {
         cout << "database is STARTED" << endl;
         return;
     }
 	cout << "isStarted -- DONE" << endl;
-
+	*/
+	//test if DB-Server currently starting
     if (isStarting(dbPath)) {
         cout << "database is STARTING" << endl;
         return;
     }
-
 	cout << "isStarting -- DONE" << endl;
 
-    // Ok, the server is stopped.
+    // Ok, the server is stopped. Lets start it
 
     setStartingLock(dbPath);
 
@@ -545,7 +515,7 @@ void runQuery(string dbPath, string query) {
 
     int port = getPort(dbPath);
 
-    string host = "localhost";
+    string host = "127.0.0.1";
     string command = "query " + query;
     try {
 
@@ -579,7 +549,7 @@ void stopDatabase(string dbPath) {
 
     }
 
-    string host = "localhost";
+    string host = "127.0.0.1";
     string command = "term";
     try {
         string ret = sendCommand(host, port, command);
