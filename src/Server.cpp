@@ -180,7 +180,7 @@ readCommand(int newsockfd) {
 
 
 void handleQuery(string query, SOCKET sockfd, Ptr<Database> &db) {
-
+	cout << endl << endl << "#####NEW QUERY#####" << endl;
     //msg()
     string msg;
     msg = "executing query: " + query;
@@ -518,7 +518,7 @@ void runQuery(string dbPath, string query) {
     string host = "127.0.0.1";
     string command = "query " + query;
     try {
-
+		cout << "#####NEW QUERY#####" << endl;
         string ret = sendCommand(host, port, command);
         cout << ret << endl;
 
