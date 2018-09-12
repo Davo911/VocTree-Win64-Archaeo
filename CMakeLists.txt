@@ -12,7 +12,7 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
 ENDIF()
 
 # In case cmake didn't find OpenCV set variable OpenCV_DIR correctly
-# set(OpenCV_DIR ~/opencv/installed/3.1.0/share/OpenCV)
+#set(OpenCV_DIR ./OCVinstall/)
 find_package(OpenCV REQUIRED)
 
 add_subdirectory(src)
