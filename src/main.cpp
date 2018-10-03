@@ -15,7 +15,7 @@
 #include "FileHelper.h"
 #include "FeatureMethod.h"
 #include "Database.h"
-
+#include <chrono>
 
 #include "Server.h"
 
@@ -160,9 +160,16 @@ void buildDatabase(string dbPath, int argc, char **argv) {
     int maxFilesVocabulary = 0;
     bool reuseVocabulary = reuseFeatures;
 
+	// Record start time
+	auto t1 = std::chrono::high_resolution_clock::now();
+
     Database::build(dbPath, fm, reuseFeatures, k, h, maxFiles, maxFilesVocabulary, reuseVocabulary, pca);
     cout << "build done." << endl << flush;
 
+	// Record end time
+	auto t2 = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+	cout << "Time:" << duration << endl << flush;
 
     return;
 }

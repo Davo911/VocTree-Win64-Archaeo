@@ -17,7 +17,7 @@
 #include "FileHelper.h"
 #include <string>
 #include <iostream>
-
+#include <chrono>
 
 
 using namespace std;
@@ -365,22 +365,10 @@ void listenForClients(int port, Ptr<Database> db) {
 			term = true;
 			continue;
 		}
-
-
-
-	
-
-
-
-
 		//creating "child"-thread???????????
 		std::thread child([&newsockfd,&db] {
-
-
-		cout << "process query..." << endl;
-		processClient(newsockfd, db);
-
-			
+			cout << "process query..." << endl;
+			processClient(newsockfd, db);
 		});
 
 		child.join();
@@ -518,9 +506,18 @@ void runQuery(string dbPath, string query) {
     string host = "127.0.0.1";
     string command = "query " + query;
     try {
+		// Record start time
+		auto t1 = std::chrono::high_resolution_clock::now();
+
 		cout << "#####NEW QUERY#####" << endl;
-        string ret = sendCommand(host, port, command);
-        cout << ret << endl;
+		string ret = sendCommand(host, port, command);
+		cout << ret << endl;
+
+		// Record end time
+		auto t2 = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+		cout << "Time_in_ms:" << duration << endl << flush;
+
 
     }
     catch (int ex) {
