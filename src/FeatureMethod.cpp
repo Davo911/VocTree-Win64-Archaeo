@@ -13,6 +13,8 @@
 using namespace cv;
 using namespace std;
 
+int nfeat = 0;//numbers of features to keep
+
 
 ostream &
 operator<<(ostream &out, FeatureMethod fm) {
@@ -89,6 +91,8 @@ FeatureMethod::getDetectorKey(int dt) {
             return "SIFT";
         case (DETECT_SURF):
             return "SURF";
+		case (DETECT_SIFTX):
+			return "SIFTX";
     }
 
     return "not supported";
@@ -110,6 +114,7 @@ FeatureMethod::getDetectorType(string key) {
     if (key == "SIFT") return DETECT_SIFT;
     if (key == "STAR") return DETECT_STAR;
     if (key == "SURF") return DETECT_SURF;
+	if (key == "SIFTX") return DETECT_SIFTX;
 
     return -1;
 
@@ -140,7 +145,8 @@ FeatureMethod::getExtractorKey(int et) {
             return "SIFT";
         case (EXTRACT_SURF):
             return "SURF";
-
+		case (EXTRACT_SIFTX):
+			return "SIFTX";
         case (EXTRACT_RootSIFT):
             return "RootSIFT";
     }
@@ -177,7 +183,7 @@ FeatureMethod::getExtractorType(string key) {
     if (key == "ORB") return EXTRACT_ORB;
     if (key == "SIFT") return EXTRACT_SIFT;
     if (key == "SURF") return EXTRACT_SURF;
-
+	if (key == "SIFTX") return EXTRACT_SIFTX;
     if (key == "RootSIFT") return EXTRACT_RootSIFT;
 
 
@@ -256,7 +262,7 @@ FeatureMethod::_init(int detectorType, int extractorType) {
             break;
             //case (DETECT_KAZE):  _pfd = KAZE::create(); 					break;
         case (DETECT_KAZE):
-            _pfd = KAZE::create(true, false, 0.0001f, 4, 4, KAZE::DIFF_PM_G2);
+            _pfd = KAZE::create(true, false, 0.001f, 4, 4, KAZE::DIFF_PM_G2);
             break;
         case (DETECT_MSER):
             _pfd = MSER::create();
@@ -264,12 +270,16 @@ FeatureMethod::_init(int detectorType, int extractorType) {
         case (DETECT_ORB):
             _pfd = ORB::create(2500);
             break;
-        case (DETECT_SIFT):
-            _pfd = xfeatures2d::SIFT::create();
+        case (DETECT_SIFTX):
+            _pfd = xfeatures2d::SIFT::create(nfeat,3,0.04,10,1.6);
             break;
+		case (DETECT_SIFT):
+			_pfd = xfeatures2d::SIFT::create();
+			break;
         case (DETECT_SURF):
             _pfd = xfeatures2d::SURF::create();
             break;
+			
     }
 
     int d = detectorType;
@@ -282,6 +292,7 @@ FeatureMethod::_init(int detectorType, int extractorType) {
             (d == DETECT_MSER && e == EXTRACT_MSER) ||
             (d == DETECT_ORB && e == EXTRACT_ORB) ||
             (d == DETECT_SIFT && e == EXTRACT_SIFT) ||
+			(d == DETECT_SIFTX && e == EXTRACT_SIFTX) ||
             (d == DETECT_SURF && e == EXTRACT_SURF)) {
         _pde = _pfd;
     } else {
@@ -314,6 +325,9 @@ FeatureMethod::_init(int detectorType, int extractorType) {
             case (EXTRACT_SIFT):
                 _pde = xfeatures2d::SIFT::create();
                 break;
+			case (EXTRACT_SIFTX):
+				_pde = xfeatures2d::SIFT::create(1000, 3, 0.04, 10, 1.6);
+				break;
             case (EXTRACT_SURF):
                 _pde = xfeatures2d::SURF::create();
                 break;
@@ -429,6 +443,11 @@ FeatureMethod::FeatureMethod(string fileName) {
 
 FeatureMethod::~FeatureMethod() {
 
+}
+
+void FeatureMethod::setFeatNumber(int fnum)
+{
+	nfeat = fnum;
 }
 
 

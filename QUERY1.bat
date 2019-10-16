@@ -1,1 +1,1 @@
-C:\Users\David\Documents\GitHub\VocTree-Win64-Archaeo\build\src\Release\engine.exe -query C:\Users\David\Desktop\VocTreeDatasets\Dataset8 C:\Users\David\Desktop\VocTreeDatasets\Dataset8\input\GOPR2566_13_f581.jpg
+C:\Users\David\Documents\GitHub\VocTree-Win64-Archaeo\build\src\Release\engine.exe -query C:\Users\David\Desktop\VocTreeDatasets\Dataset512\ C:\Users\David\Desktop\VocTreeDatasets\Dataset512\queries\GOPR2584_102_f710.jpg

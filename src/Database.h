@@ -64,7 +64,7 @@ public:
  */
     static Ptr<Database> build(
             string &path, FeatureMethod &fm, bool reuseFeatures, int k, int h, int maxFiles, int maxFilesVocabulary,
-            bool reuseVocabulary, int pca_dim
+            bool reuseVocabulary, int pca_dim, bool ondisk
             //, int maxTrainingFiles
     );
 
@@ -223,6 +223,7 @@ private:
     int _maxFiles;
     int _maxFilesVocabulary;
     bool _reuseVocabulary;
+	bool _ondisk;
     int _kmeansAttempts;
     TermCriteria _term;
 
@@ -257,7 +258,7 @@ private:
     // maxFiles: maximum number of files to process (for features generation)
     // maxTrainingFiles: maximum number of files to include in vocabulary
     Database(string &path, FeatureMethod &fm, bool reuseFeatures, int k, int h, int maxFiles, int maxFilesVocabulary,
-             bool reuseVocabulary, int pca_dim
+             bool reuseVocabulary, int pca_dim, bool ondisk
             //,int kmeansAttempts
             //,TermCriteria & term
     );

@@ -62,6 +62,7 @@ public:
     static const int DETECT_DAISY = 9;
     static const int DETECT_SIFT = 10;
     static const int DETECT_SURF = 11;
+	static const int DETECT_SIFTX = 12;
 
     /**
      * 	Available Descriptor Extractors:
@@ -85,7 +86,9 @@ public:
     static const int EXTRACT_SURF = 10;
 
     static const int EXTRACT_RootSIFT = 11;
+	static const int EXTRACT_SIFTX = 12;
 
+	
 
     /**
      * Creates a default FeatureMethod
@@ -114,6 +117,12 @@ public:
 
 
     virtual ~FeatureMethod();
+
+    /**
+     * setFeatNumber
+     * @return returns the norm to be used to compare descriptors extracted with this method
+     */
+    void setFeatNumber(int fnum);
 
     /**
      * getDefaultNorm
@@ -147,6 +156,8 @@ public:
      */
     void load(Configuration &cfg);
 
+	void _init(int detectorType, int extractorType);
+
     friend ostream &operator<<(ostream &out, FeatureMethod fm);
 
     string getDetectorKey();
@@ -163,7 +174,7 @@ public:
 
 private:
 
-    void _init(int detectorType, int extractorType);
+    
 
     int _detectorType;
     int _extractorType;

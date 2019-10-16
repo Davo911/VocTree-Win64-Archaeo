@@ -16,6 +16,7 @@
 #include "VecPersistor.hpp"
 #include "ExtKmeans.h"
 #include "FileHelper.h"
+
 #include "KMeans.h"
 
 using namespace cv;
@@ -82,13 +83,16 @@ VocTree::cluster(
     //  - flags
     //  - centers
 
+
     if (_useNorm == NORM_L2) {
         // use statndard kmeans algorithm
         kmeans(descriptors, K, labels, term, attempts, flags, centers);
+		//extKmeans(_useNorm, K, 10, descriptors, 3000000000, labels, centers);
     } else {
         // for HAMMING uses kmajority
         myKmeans(_useNorm, K, 10, descriptors, labels, centers);
     }
+    
 
 
     // Create empty collections to distribute values in clusters
@@ -324,10 +328,8 @@ VocTree::createNode(int idNode,
     long required = rows;
     required *= cols;
     required *= size;
-
-    if (required > useMem) {
-
-        // rows don't fit in memory
+    if (_ondisk == true || required > useMem) {
+        // rows don't fit in memory or 
         // then process buffering from file.
         mp.close();
 
@@ -335,7 +337,6 @@ VocTree::createNode(int idNode,
         //buildNodeGen( idNode, level, true, &file, NULL, rows );
 
     } else {
-
         // resuming from RAM
         // rows fit entirely in memory.
         mp.read(descriptors, required);
@@ -434,7 +435,6 @@ VocTree::buildNodes() {
     FileManager fm(_path);
     //string fileDescriptors = fm.file( FileManager::DESCRIPTORS );
     string fileDescriptors = fm.file(FileManager::VOCABULARY_DESCRIPTORS);
-
     // creates the matrix for centers using
     // the same type as the descriptors.
     MatPersistor mp(fileDescriptors);
@@ -442,11 +442,9 @@ VocTree::buildNodes() {
     _centDim = mp.cols();
     _centType = mp.type();
     mp.close();
-
     // fills the indexes with 0s
     _index.assign(_nNodes, 0);
     _indexLeaves.resize(_nNodes);
-
     // create center buffer and expands it
     // for example. (K=10, h=6, dim=128x4) => approx. 543 MB
     _centers.create(0, _centDim, _centType);
@@ -454,24 +452,22 @@ VocTree::buildNodes() {
 
     // Creates root node.
     createNode(0, 0, fileDescriptors);
-
     // reduce buffers to gain some memory
     //_index.resize(_usedNodes);
     _indexLeaves.resize(_usedNodes);
     shrink(_centers, _usedNodes);
 
-
 }
 
 
-VocTree::VocTree(int k, int h, Catalog<DBElem> &images, string &path, bool reuseVocabulary, int useNorm
+VocTree::VocTree(int k, int h, Catalog<DBElem> &images, string &path, bool reuseVocabulary, int useNorm, bool ondisk
         //int kmeansAtt,
         //TermCriteria crit
 ) {
-
     cout << "voctree create" << endl;
 
     bool reuseInvIdx = false;
+	
 
     _path = path;
     FileManager fileMgr(_path);
@@ -493,6 +489,7 @@ VocTree::VocTree(int k, int h, Catalog<DBElem> &images, string &path, bool reuse
 
     } else {
 
+		_ondisk = ondisk;
         _k = k;
         _h = h;
         _dbSize = images.size();

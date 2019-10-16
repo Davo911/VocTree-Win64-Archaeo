@@ -218,7 +218,7 @@ void handleQuery(string query, SOCKET sockfd, Ptr<Database> &db) {
         //cout << score << " " << info.name << endl;
 
         stringstream ss;
-        ss << score << "," << m.id << ", " << info.fileName << endl;
+        ss << score << "|" << m.id << "|" << info.fileName << endl;
 
         //int n = write(sockfd, ss.str().c_str(), ss.str().size());
 		int n = send(sockfd, ss.str().c_str(), ss.str().size(), 0);
@@ -506,17 +506,11 @@ void runQuery(string dbPath, string query) {
     string host = "127.0.0.1";
     string command = "query " + query;
     try {
-		// Record start time
-		auto t1 = std::chrono::high_resolution_clock::now();
 
 		cout << "#####NEW QUERY#####" << endl;
 		string ret = sendCommand(host, port, command);
 		cout << ret << endl;
 
-		// Record end time
-		auto t2 = std::chrono::high_resolution_clock::now();
-		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-		cout << "Time_in_ms:" << duration << endl << flush;
 
 
     }

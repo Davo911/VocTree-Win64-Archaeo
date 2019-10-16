@@ -57,6 +57,9 @@ void printHelpBuild(string cmd) {
     cout << "\t" << "[-pca N]: if specified pca is applied over the extracted descriptors." << endl;
     cout << "\t\t" << "Dimensions are reduced to N." << endl;
     cout << endl;
+	cout << "\t" << "[-fnum N]: if specified sets a keypoint threshold" << endl;
+	cout << "\t\t" << "	The number of best features to retain." << endl;
+	cout << endl;
     cout << "---" << endl;
     cout << endl;
     cout << "\t" << "example:" << endl;
@@ -94,16 +97,19 @@ void printHelpBuild(string cmd) {
  *                      where K is the branch factor, and H is the maximum height for the tree.
  *              [-pca N]: if specified pca is applied over the extracted descriptors.
  *                          Dimensions are reduced to N.
- *
+ *				[-ondisk]: clusters all files on disk instead of the RAM
+ *				[-fnum N]: 	The number of best features to retain.
  */
 void buildDatabase(string dbPath, int argc, char **argv) {
 
+	bool ondisk = false;
     bool reuseFeatures = false;
 
     string method = "SIFT:SIFT";
     string vtParams = "10:6";
     string strPCA = "0";
-
+	int fnum = 0;
+	/*
     if (argc >= 4) {
 
         if (_stricmp(argv[3], "-reuse") == 0) {
@@ -126,9 +132,30 @@ void buildDatabase(string dbPath, int argc, char **argv) {
                 }
             }
         }
-
     }
+	*/
 
+	for (int i = 0; i < argc; i++)
+	{
+		if (_stricmp(argv[i], "-ondisk") == 0){
+			ondisk = true;
+		}
+		else if (_stricmp(argv[i], "-reuse") == 0) {
+			reuseFeatures = true;
+		}
+		else if (_stricmp(argv[i], "-method") == 0) {
+			method = argv[i + 1];
+		}
+		else if (_stricmp(argv[i], "-vtp") == 0) {
+			vtParams = argv[i + 1];
+		}
+		else if (_stricmp(argv[i], "-pca") == 0) {
+			strPCA = argv[i + 1];
+		}
+		else if (_stricmp(argv[i], "-fnum") == 0) {
+			fnum = atoi(argv[i + 1]);
+		}
+	}
 
     int pos;
     pos = method.find(":");
@@ -153,23 +180,25 @@ void buildDatabase(string dbPath, int argc, char **argv) {
 
     cout << "building database " << dbPath << "..." << endl << flush;
     cout << "feature method: " << method << endl << flush;
+	if(fnum!=0){ cout << "Feature Threshold: " << fnum << endl << flush; }
     cout << "voctree: k:" << k << " h: " << h << endl << flush;
+	if(reuseFeatures)
+		cout << "Reusing Features" << endl << flush;
+	if(ondisk)
+		cout << "Cluster on disk" << endl << flush;
 
     FeatureMethod fm(detectorType, extractorType);
+	if (fnum != 0) {
+		fm.setFeatNumber(fnum);
+		fm._init(detectorType, extractorType);
+	}
     int maxFiles = 0;
     int maxFilesVocabulary = 0;
     bool reuseVocabulary = reuseFeatures;
 
-	// Record start time
-	auto t1 = std::chrono::high_resolution_clock::now();
 
-    Database::build(dbPath, fm, reuseFeatures, k, h, maxFiles, maxFilesVocabulary, reuseVocabulary, pca);
+    Database::build(dbPath, fm, reuseFeatures, k, h, maxFiles, maxFilesVocabulary, reuseVocabulary, pca, ondisk);
     cout << "build done." << endl << flush;
-
-	// Record end time
-	auto t2 = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-	cout << "Time:" << duration << endl << flush;
 
     return;
 }
@@ -204,6 +233,9 @@ void printHelpUpdate() {
     cout << "\t" << "[-pca N]: if specified pca is applied over the extracted descriptors." << endl;
     cout << "\t\t" << "Dimensions are reduced to N." << endl;
     cout << endl;
+	cout << "\t" << "[-fnum N]: if specified sets a keypoint threshold" << endl;
+	cout << "\t\t" << "	The number of best features to retain." << endl;
+	cout << endl;
     cout << "---" << endl;
 
 }
@@ -402,12 +434,25 @@ int main(int argc, char **argv) {
     }
 	//SERVER STUFF
     if (_stricmp(option.c_str(), "-build") == 0) {
-        buildDatabase(dbPath, argc, argv);
+
+		// Record start time
+		auto t1 = std::chrono::high_resolution_clock::now();
+
+
+		buildDatabase(dbPath, argc, argv);
+
+
+		// Record end time
+		auto t2 = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+		cout << "Time_in_ms:" << duration << endl << flush;
+		
     }
     else
     if (_stricmp(option.c_str(), "-update") == 0) {
 		cout << "Updating...";
         updateDatabase(dbPath);
+		
     }
     else
     if (_stricmp(option.c_str(), "-start") == 0) {
@@ -437,7 +482,17 @@ int main(int argc, char **argv) {
         }
         string query = argv[3];
 
+		// Record start time
+		auto t1 = std::chrono::high_resolution_clock::now();
+
+
         runQuery(dbPath, query);
+
+
+		// Record end time
+		auto t2 = std::chrono::high_resolution_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+		cout << "Time_in_ms:" << duration << endl << flush;
 
     }
     else {

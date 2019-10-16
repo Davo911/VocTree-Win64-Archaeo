@@ -22,11 +22,11 @@ Database::build(
         FeatureMethod &fm,
         bool reuseFeatures,
         int k,
-        int h, int maxFiles, int maxFilesVocabulary, bool reuseVocabulary, int pca_dim
+        int h, int maxFiles, int maxFilesVocabulary, bool reuseVocabulary, int pca_dim, bool ondisk
 ) {
 
     Ptr<Database> ret = new Database(path, fm, reuseFeatures, k, h, maxFiles, maxFilesVocabulary, reuseVocabulary,
-                                     pca_dim
+                                     pca_dim, ondisk
     );
     return ret;
 }
@@ -540,24 +540,31 @@ void Database::processInput(bool reuseFeatures, bool forVocabulary) {
         mp.close();
 
     } else {
+		try
+		{
+			cout << "processing files: " << endl;
 
-        cout << "processing files: " << endl;
+			FileHelper::deleteFile(fileCatalog);
+			FileHelper::deleteFile(fileVideos);
+			FileHelper::deleteFile(fileKeyps);
+			FileHelper::deleteFile(fileDescs);
 
-        FileHelper::deleteFile(fileCatalog);
-        FileHelper::deleteFile(fileVideos);
-        FileHelper::deleteFile(fileKeyps);
-        FileHelper::deleteFile(fileDescs);
+			processFiles(false, forVocabulary);
 
-        processFiles(false, forVocabulary);
+			cout << "storing catalog..." << endl;
+			ctlg->store(fileCatalog);
 
-        cout << "storing catalog..." << endl;
-        ctlg->store(fileCatalog);
+			cout << "storing video catalog..." << endl;
+			ctlgVid->store(fileVideos);
 
-        cout << "storing video catalog..." << endl;
-        ctlgVid->store(fileVideos);
-
-        cout << "storing method..." << endl;
-        _fm.store(fileMethod);
+			cout << "storing method..." << endl;
+			_fm.store(fileMethod);
+		}
+		catch (Exception e)
+		{
+			cout << "code:" << e.code << "/nMSG:" << e.msg << endl;
+		}
+        
 
     }
 
@@ -607,7 +614,7 @@ Database::Database(
         FeatureMethod &fm,
         bool reuseFeatures,
         int k,
-        int h, int maxFiles, int maxFilesVocabulary, bool reuseVocabulary, int pca_dim
+        int h, int maxFiles, int maxFilesVocabulary, bool reuseVocabulary, int pca_dim, bool ondisk
         //, int maxTrainingFiles
         //,int kmeansAttempts
         //,TermCriteria & crit
@@ -626,7 +633,7 @@ Database::Database(
     _maxFiles = maxFiles;
     _reuseVocabulary = reuseVocabulary;
     _maxFilesVocabulary = maxFilesVocabulary;
-
+	_ondisk = ondisk;
     //_kmeansAttempts = kmeansAttempts;
     //_pMpDescs = NULL;
 
@@ -798,7 +805,7 @@ Database::buildtree(int k, int h, int useNorm) {
     if (_maxFiles > 0) {
         _catalog.shrink(_maxFiles);
     }
-    _vt = new VocTree(k, h, _catalog, _path, _reuseVocabulary, useNorm);
+    _vt = new VocTree(k, h, _catalog, _path, _reuseVocabulary, useNorm, _ondisk);
 
 
 }

@@ -44,7 +44,8 @@ public:
             Catalog<DBElem> &images,
             string &dbPath,
             bool reuseCenters,
-            int useNorm
+            int useNorm,
+			bool ondisk
 
     );
 
@@ -88,6 +89,8 @@ public:
     void showInfo();
 
 private:
+	// cluster on the Disk instead of the RAM
+	bool _ondisk;
 
     // norm used to compare descriptors
     int _useNorm;
